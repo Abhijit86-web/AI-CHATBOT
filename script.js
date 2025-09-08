@@ -15,7 +15,7 @@ const CONFIG = {
   }
 };
 
-// Static responses
+// Response templates
 const responses = {
   greetings: [
     "Hello! How can I assist you today?",
@@ -30,13 +30,13 @@ const responses = {
   ],
   name: [
     "I'm JASS GPT, your AI assistant!",
-    "You can call me JASS GPT. I'm here to help you with various questions and tasks!",
-    "I'm JASS GPT - an AI designed to assist and chat with you!"
+    "You can call me JASS GPT. I'm here to help!",
+    "I'm JASS GPT - your virtual AI companion!"
   ],
   weather: [
-    "I don't have access to real-time weather data, but you can check your local weather forecast on weather websites or apps!",
-    "For current weather information, I'd recommend checking a reliable weather service like weather.com or your local weather app.",
-    "I can't provide live weather updates, but weather apps on your phone usually have the most accurate current conditions!"
+    "I can't access live weather data. Try weather.com or a weather app.",
+    "Weather updates are best from your local weather app.",
+    "I recommend checking weather websites for real-time data."
   ],
   time: [
     `The current time is: ${new Date().toLocaleTimeString()}`,
@@ -49,55 +49,55 @@ const responses = {
     `The current date is ${new Date().toLocaleDateString()}`
   ],
   programming: [
-    "I can help with programming questions! What language or concept would you like to discuss?",
-    "Programming is one of my favorite topics! What coding challenge can I help you with?",
-    "I'd be happy to assist with programming. Are you working on something specific?"
+    "I can help with programming! What language or problem are you working on?",
+    "Programming is fun! Tell me what you're building.",
+    "Need help with code? Let me know the language or error!"
   ],
   math: [
-    "I can help with math problems! What calculation or concept do you need assistance with?",
-    "Mathematics is fascinating! What math question can I help you solve?",
-    "I'm ready to tackle some math with you! What's the problem you're working on?"
+    "Need help with math? Give me the problem!",
+    "Math is cool! What would you like me to solve?",
+    "Give me the equation, and I’ll help you with it."
   ],
   help: [
-    "I can help with a wide variety of topics including: general questions, math, programming, writing, explanations of concepts, and casual conversation. What would you like to explore?",
-    "I'm here to assist with information, answer questions, help with problems, or just have a friendly chat. What interests you?",
-    "I can provide information, explanations, help with tasks, answer questions, or simply chat. How would you like me to help?"
+    "I can help with general questions, math, programming, writing, and more!",
+    "Need help? Ask me anything — programming, math, general info, or casual chat!",
+    "I'm here to assist! Just type your question."
   ],
   thanks: [
-    "You're very welcome! Happy to help!",
-    "My pleasure! Feel free to ask anything else.",
-    "Glad I could help! Is there anything else you'd like to know?"
+    "You're welcome!",
+    "Happy to help!",
+    "Any time! Need anything else?"
   ],
   default: [
-    "That's an interesting question! Could you tell me more about what you're looking for?",
-    "I'd be happy to help! Can you provide a bit more context about what you need?",
-    "Great question! Let me think about that... Could you elaborate a bit more?",
-    "I'm here to help! What specific aspect of this would you like me to focus on?",
-    "That's a thoughtful question. What would be most helpful for you to know about this topic?"
+    "Can you tell me more about that?",
+    "I'm here to help! Could you clarify your question?",
+    "Interesting! Could you provide more context?",
+    "Let’s explore that together. Could you expand a little?"
   ]
 };
 
-// Backend API function
+// Backend API call
 async function callBackendAPI(message) {
   try {
     const response = await fetch(CONFIG.API_URL.backend, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Backend error: ${errorData.message || 'Internal server error'}`);
+      if (response.status === 401) throw new Error('Backend authentication failed.');
+      if (response.status === 429) throw new Error('Rate limit exceeded.');
+      if (response.status === 500) throw new Error(`Backend error: ${errorData.message || 'Internal error'}`);
+      throw new Error(`Backend error: ${response.status}`);
     }
 
     const data = await response.json();
     if (data.success && data.response) {
       return data.response;
     } else {
-      throw new Error('Invalid response format from backend');
+      throw new Error('Invalid response format');
     }
   } catch (error) {
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
@@ -107,77 +107,79 @@ async function callBackendAPI(message) {
   }
 }
 
-// Fallback advanced AI-like logic
-async function generateAdvancedAIResponse(message) {
-  const msg = message.toLowerCase().trim();
+// Generate fallback response
+function getFallbackResponse(userMessage) {
+  const msg = userMessage.toLowerCase().trim();
 
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Custom rules
-  if (msg.includes('write') && msg.includes('code')) {
-    return `I can help you write code! Based on "${message}", what language are you interested in?`;
+  if (msg.match(/^(hi|hello|hey|good morning|good afternoon|good evening|greetings)/)) {
+    return getRandomResponse('greetings');
+  }
+  if (msg.match(/how are you|how's it going|how do you do/)) {
+    return getRandomResponse('howAreYou');
+  }
+  if (msg.match(/what's your name|who are you|your name/)) {
+    return getRandomResponse('name');
+  }
+  if (msg.match(/weather|temperature|rain|sunny|cloudy/)) {
+    return getRandomResponse('weather');
+  }
+  if (msg.match(/what time|current time|time is it/)) {
+    return getRandomResponse('time');
+  }
+  if (msg.match(/what date|today's date|what day/)) {
+    return getRandomResponse('date');
+  }
+  if (msg.match(/programming|coding|code|javascript|python|html|css|development/)) {
+    return getRandomResponse('programming');
+  }
+  if (msg.match(/math|calculate|equation|formula|number/)) {
+    return getRandomResponse('math');
+  }
+  if (msg.match(/help|what can you do|capabilities|assist/)) {
+    return getRandomResponse('help');
+  }
+  if (msg.match(/thank you|thanks|appreciate/)) {
+    return getRandomResponse('thanks');
   }
 
-  if (msg.includes('how to') || msg.includes('tutorial')) {
-    return `Here's a general approach for "${message}":\n1. Understand the basics\n2. Plan and break down the task\n3. Implement step by step. Want a specific example?`;
-  }
-
-  if (msg.includes('difference') || msg.includes('vs')) {
-    return `Good comparison! "${message}" typically involves differences in speed, complexity, or use cases. Which aspect should I compare?`;
-  }
-
-  if (msg.match(/\d+\s*[\+\-\*\/]\s*\d+/)) {
+  // Simple math handling
+  if (msg.match(/^\d+\s*[\+\-\*\/]\s*\d+$/)) {
     try {
       const result = eval(msg.replace(/[^\d\+\-\*\/\.]/g, ''));
-      return `The result of "${message}" is ${result}`;
-    } catch {
-      return "That looks like a math expression, but I couldn't compute it.";
+      return `The answer is: ${result}`;
+    } catch (e) {
+      return "I couldn't calculate that. Try a simpler math expression.";
     }
   }
-
-  return responses.default[Math.floor(Math.random() * responses.default.length)];
-}
-
-// Main API route
-async function getAPIResponse(message) {
-  try {
-    if (CONFIG.API_TYPE === 'backend') {
-      return await callBackendAPI(message);
-    }
-    return await generateAdvancedAIResponse(message);
-  } catch (error) {
-    console.error('API Error:', error.message);
-    if (error.message === 'BACKEND_OFFLINE') {
-      return await generateAdvancedAIResponse(message);
-    }
-    return await generateAdvancedAIResponse(message);
-  }
-}
-
-// Fallback without API
-function getFallbackResponse(userMessage) {
-  const msg = userMessage.toLowerCase();
-
-  if (/^(hi|hello|hey|greetings)/.test(msg)) return getRandomResponse('greetings');
-  if (/how are you/.test(msg)) return getRandomResponse('howAreYou');
-  if (/your name|who are you/.test(msg)) return getRandomResponse('name');
-  if (/weather|temperature/.test(msg)) return getRandomResponse('weather');
-  if (/time/.test(msg)) return getRandomResponse('time');
-  if (/date|day/.test(msg)) return getRandomResponse('date');
-  if (/code|html|css|javascript|python/.test(msg)) return getRandomResponse('programming');
-  if (/math|calculate|equation/.test(msg)) return getRandomResponse('math');
-  if (/thank/.test(msg)) return getRandomResponse('thanks');
-  if (/help/.test(msg)) return getRandomResponse('help');
 
   return getRandomResponse('default');
 }
 
+// Get random fallback response
 function getRandomResponse(category) {
-  const arr = responses[category];
-  return arr[Math.floor(Math.random() * arr.length)];
+  const responseArray = responses[category];
+  return responseArray[Math.floor(Math.random() * responseArray.length)];
 }
 
-// UI message handling
+// Get AI response from backend or fallback
+async function getAIResponse(userMessage) {
+  try {
+    if (CONFIG.USE_API && CONFIG.API_TYPE === 'backend') {
+      return await callBackendAPI(userMessage);
+    } else {
+      return getFallbackResponse(userMessage);
+    }
+  } catch (error) {
+    if (error.message === 'BACKEND_OFFLINE') {
+      console.warn('Backend offline, using fallback.');
+      return getFallbackResponse(userMessage);
+    }
+    console.error('API Error:', error);
+    return "Sorry, I couldn't process that. Try again!";
+  }
+}
+
+// Chat interface functions
 function addMessage(content, isUser) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
@@ -192,6 +194,7 @@ function addMessage(content, isUser) {
 
   messageDiv.appendChild(avatar);
   messageDiv.appendChild(messageContent);
+
   chatBox.appendChild(messageDiv);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -218,10 +221,9 @@ function showTypingIndicator() {
   typingContent.appendChild(typingDots);
   typingDiv.appendChild(avatar);
   typingDiv.appendChild(typingContent);
+
   chatBox.appendChild(typingDiv);
   chatBox.scrollTop = chatBox.scrollHeight;
-
-  return typingDiv;
 }
 
 function removeTypingIndicator() {
@@ -229,26 +231,29 @@ function removeTypingIndicator() {
   if (typingIndicator) typingIndicator.remove();
 }
 
-// Form submit
+// Submit handler
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+
   const message = userInput.value.trim();
   if (!message) return;
 
   addMessage(message, true);
   userInput.value = '';
 
-  const typingIndicator = showTypingIndicator();
+  showTypingIndicator();
+
   try {
-    const aiResponse = await getAPIResponse(message);
+    const aiResponse = await getAIResponse(message);
     removeTypingIndicator();
     addMessage(aiResponse, false);
   } catch (error) {
     removeTypingIndicator();
-    addMessage("Oops! Something went wrong. Please try again later.", false);
+    addMessage("Oops! Something went wrong.", false);
   }
 });
 
+// Focus input on load
 window.addEventListener('load', () => {
   userInput.focus();
 });
